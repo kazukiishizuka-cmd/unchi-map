@@ -17,9 +17,20 @@ export type Record = {
   latitude: number;
   longitude: number;
   comment: string | null;
+  visibility: "public" | "close_only" | "private";
   recorded_at: string;
   created_at: string;
   profiles?: Profile;
+};
+
+export type Partnership = {
+  id: string;
+  requester_id: string;
+  partner_id: string;
+  status: "pending" | "accepted" | "rejected";
+  streak_count: number;
+  last_both_date: string | null;
+  created_at: string;
 };
 
 export type Friendship = {
@@ -27,5 +38,6 @@ export type Friendship = {
   requester_id: string;
   addressee_id: string;
   status: "pending" | "accepted" | "rejected";
+  is_close: boolean;
   created_at: string;
 };

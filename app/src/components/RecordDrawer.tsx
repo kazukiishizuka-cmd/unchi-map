@@ -22,6 +22,7 @@ type Props = {
 
 export default function RecordDrawer({ location, profile, onClose, onComplete }: Props) {
   const [comment, setComment] = useState("");
+  const [visibility, setVisibility] = useState<"public" | "close_only" | "private">("public");
   const [loading, setLoading] = useState(false);
   const [address, setAddress] = useState("");
 
@@ -56,6 +57,7 @@ export default function RecordDrawer({ location, profile, onClose, onComplete }:
       latitude: location.coords.latitude,
       longitude: location.coords.longitude,
       comment: comment || null,
+      visibility,
     });
 
     if (recordError) {
@@ -102,6 +104,31 @@ export default function RecordDrawer({ location, profile, onClose, onComplete }:
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.title}>💩 記録する</Text>
+            </View>
+
+            {/* Visibility */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>公開範囲</Text>
+              <View style={styles.visibilityRow}>
+                <TouchableOpacity
+                  style={[styles.visibilityChip, visibility === "public" ? styles.visibilityActive : null]}
+                  onPress={() => setVisibility("public")}
+                >
+                  <Text style={[styles.visibilityText, visibility === "public" ? styles.visibilityTextActive : null]}>全フレンド</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.visibilityChip, visibility === "close_only" ? styles.visibilityActive : null]}
+                  onPress={() => setVisibility("close_only")}
+                >
+                  <Text style={[styles.visibilityText, visibility === "close_only" ? styles.visibilityTextActive : null]}>親しい友達</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.visibilityChip, visibility === "private" ? styles.visibilityActive : null]}
+                  onPress={() => setVisibility("private")}
+                >
+                  <Text style={[styles.visibilityText, visibility === "private" ? styles.visibilityTextActive : null]}>非公開</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Location */}
@@ -192,6 +219,22 @@ const styles = StyleSheet.create({
   },
   toggleText: { color: "#fff", fontSize: 13, fontWeight: "600" },
   section: { marginBottom: 20 },
+  visibilityRow: { flexDirection: "row", gap: 8 },
+  visibilityChip: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    alignItems: "center",
+  },
+  visibilityActive: {
+    backgroundColor: "rgba(74,144,217,0.2)",
+    borderColor: "#4A90D9",
+  },
+  visibilityText: { color: "#888", fontSize: 12, fontWeight: "600" },
+  visibilityTextActive: { color: "#4A90D9" },
   sectionLabel: {
     color: "#888",
     fontSize: 12,

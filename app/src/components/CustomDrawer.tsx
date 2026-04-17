@@ -15,7 +15,7 @@ import type { Profile } from "../types";
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const DRAWER_WIDTH = 300;
 
-type Screen = "Map" | "History" | "Friends" | "Settings";
+type Screen = "Map" | "History" | "Friends" | "Settings" | "Ranking" | "Partner";
 
 type Props = {
   visible: boolean;
@@ -104,6 +104,16 @@ export default function CustomDrawer({ visible, onClose, onNavigate, profile, pe
                 <Text style={styles.badgeText}>{pendingCount}</Text>
               </View>
             )}
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={() => handleNavigate("Partner")}>
+            <Text style={styles.menuIcon}>🤝</Text>
+            <Text style={styles.menuText}>パートナー</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={() => handleNavigate("Ranking")}>
+            <Text style={styles.menuIcon}>🏆</Text>
+            <Text style={styles.menuText}>ランキング</Text>
           </TouchableOpacity>
 
           <View style={styles.divider} />

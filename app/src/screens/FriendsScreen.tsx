@@ -29,9 +29,11 @@ export default function FriendsScreen({ onBack }: Props) {
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const [suggestions, setSuggestions] = useState<Profile[]>([]);
 
   useEffect(() => {
     loadFriends();
+    loadSuggestions();
   }, []);
 
   const loadFriends = async () => {
@@ -110,6 +112,70 @@ export default function FriendsScreen({ onBack }: Props) {
     }
   };
 
+  const loadSuggestions = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Get my friend IDs
+    const { data: myFs } = await supabase
+      .from("friendships")
+      .select("*")
+      .eq("status", "accepted")
+      .or("requester_id.eq." + user.id + ",addressee_id.eq." + user.id);
+
+    const myFriendIds = (myFs || []).map((f) =>
+      f.requester_id === user.id ? f.addressee_id : f.requester_id
+    );
+
+    // Get friends of friends
+    const suggestedIds = new Set<string>();
+    for (const fId of myFriendIds) {
+      const { data: fofs } = await supabase
+        .from("friendships")
+        .select("*")
+        .eq("status", "accepted")
+        .or("requester_id.eq." + fId + ",addressee_id.eq." + fId);
+
+      if (fofs) {
+        for (const f of fofs) {
+          const otherId = f.requester_id === fId ? f.addressee_id : f.requester_id;
+          if (otherId !== user.id && !myFriendIds.includes(otherId)) {
+            suggestedIds.add(otherId);
+          }
+        }
+      }
+    }
+
+    const suggestedProfiles: Profile[] = [];
+    for (const sId of suggestedIds) {
+      const { data: prof } = await supabase.from("profiles").select("*").eq("id", sId).single();
+      if (prof) suggestedProfiles.push(prof);
+    }
+    setSuggestions(suggestedProfiles);
+  };
+
+  const toggleClose = async (friendshipId: string, currentValue: boolean) => {
+    await supabase
+      .from("friendships")
+      .update({ is_close: !currentValue })
+      .eq("id", friendshipId);
+    loadFriends();
+  };
+
+  const deleteFriend = (friendshipId: string, nickname: string) => {
+    Alert.alert("フレンド削除", nickname + " をフレンドから削除しますか？", [
+      { text: "キャンセル", style: "cancel" },
+      {
+        text: "削除",
+        style: "destructive",
+        onPress: async () => {
+          await supabase.from("friendships").delete().eq("id", friendshipId);
+          loadFriends();
+        },
+      },
+    ]);
+  };
+
   const acceptRequest = async (friendshipId: string) => {
     await supabase
       .from("friendships")
@@ -165,6 +231,24 @@ export default function FriendsScreen({ onBack }: Props) {
         </View>
       )}
 
+      {/* Suggestions */}
+      {suggestions.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>知り合いかも？</Text>
+          {suggestions.map((s) => (
+            <View key={s.id} style={styles.suggestionCard}>
+              <View>
+                <Text style={styles.friendName}>{s.nickname}</Text>
+                <Text style={styles.friendId}>@{s.user_id}</Text>
+              </View>
+              <TouchableOpacity style={styles.addBtn} onPress={() => sendRequest(s.id)}>
+                <Text style={styles.addBtnText}>申請</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </>
+      )}
+
       {/* Pending Requests */}
       {pendingRequests.length > 0 && (
         <>
@@ -216,9 +300,20 @@ export default function FriendsScreen({ onBack }: Props) {
               <Text style={styles.friendName}>{item.profile.nickname}</Text>
               <Text style={styles.friendId}>@{item.profile.user_id}</Text>
             </View>
-            <Text style={styles.friendStreak}>
-              🔥 {item.profile.streak_count}日
-            </Text>
+            <TouchableOpacity
+              style={[styles.closeTag, item.friendship.is_close ? styles.closeTagActive : null]}
+              onPress={() => toggleClose(item.friendship.id, item.friendship.is_close)}
+            >
+              <Text style={[styles.closeTagText, item.friendship.is_close ? styles.closeTagTextActive : null]}>
+                {item.friendship.is_close ? "★" : "☆"}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.deleteFriendBtn}
+              onPress={() => deleteFriend(item.friendship.id, item.profile.nickname)}
+            >
+              <Text style={styles.deleteFriendText}>🗑</Text>
+            </TouchableOpacity>
           </TouchableOpacity>
         )}
         ListEmptyComponent={
@@ -338,6 +433,27 @@ const styles = StyleSheet.create({
   friendInfo: { flex: 1 },
   friendName: { color: "#fff", fontSize: 15, fontWeight: "600" },
   friendId: { color: "#666", fontSize: 12 },
-  friendStreak: { color: "#FF9800", fontSize: 13 },
+  friendStreak: { color: "#FF9800", fontSize: 13, marginRight: 12 },
+  closeTag: {
+    padding: 6,
+    marginRight: 4,
+  },
+  closeTagActive: {},
+  closeTagText: { fontSize: 18, color: "#555" },
+  closeTagTextActive: { color: "#FF9800" },
+  deleteFriendBtn: { padding: 4 },
+  deleteFriendText: { fontSize: 16 },
+  suggestionCard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginHorizontal: 20,
+    padding: 12,
+    backgroundColor: "rgba(255,152,0,0.06)",
+    borderRadius: 14,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,152,0,0.15)",
+  },
   empty: { color: "#666", textAlign: "center", marginTop: 40, fontSize: 14 },
 });

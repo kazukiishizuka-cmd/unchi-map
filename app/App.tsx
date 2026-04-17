@@ -7,10 +7,12 @@ import MapScreen from "./src/screens/MapScreen";
 import HistoryScreen from "./src/screens/HistoryScreen";
 import FriendsScreen from "./src/screens/FriendsScreen";
 import SettingsScreen from "./src/screens/SettingsScreen";
+import RankingScreen from "./src/screens/RankingScreen";
+import PartnerScreen from "./src/screens/PartnerScreen";
 import CustomDrawer from "./src/components/CustomDrawer";
 import type { Profile } from "./src/types";
 
-type Screen = "Map" | "History" | "Friends" | "Settings";
+type Screen = "Map" | "History" | "Friends" | "Settings" | "Ranking" | "Partner";
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -77,6 +79,10 @@ export default function App() {
         return <FriendsScreen onBack={() => { setCurrentScreen("Map"); setDrawerVisible(true); }} />;
       case "Settings":
         return <SettingsScreen onBack={() => { setCurrentScreen("Map"); setDrawerVisible(true); }} onProfileUpdate={loadProfile} />;
+      case "Ranking":
+        return <RankingScreen onBack={() => { setCurrentScreen("Map"); setDrawerVisible(true); }} />;
+      case "Partner":
+        return <PartnerScreen onBack={() => { setCurrentScreen("Map"); setDrawerVisible(true); }} />;
     }
   };
 

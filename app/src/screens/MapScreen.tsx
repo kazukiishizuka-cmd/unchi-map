@@ -28,7 +28,11 @@ export default function MapScreen({ onOpenDrawer }: Props) {
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"all" | "me" | "friends" | "close">("all");
+  const [closeFriendIds, setCloseFriendIds] = useState<string[]>([]);
+  const [myUserId, setMyUserId] = useState<string>("");
   const mapRef = useRef<MapView>(null);
+  const lastMarkerTap = useRef<number>(0);
 
   useEffect(() => {
     (async () => {
@@ -52,7 +56,44 @@ export default function MapScreen({ onOpenDrawer }: Props) {
       .select("*")
       .eq("id", user.id)
       .single();
-    if (data) setProfile(data);
+    if (data) {
+      setProfile(data);
+      setMyUserId(user.id);
+    }
+    // 親しいフレンドIDを取得
+    const { data: closeFs } = await supabase
+      .from("friendships")
+      .select("*")
+      .eq("status", "accepted")
+      .eq("is_close", true)
+      .or("requester_id.eq." + user.id + ",addressee_id.eq." + user.id);
+    if (closeFs) {
+      setCloseFriendIds(closeFs.map((f) =>
+        f.requester_id === user.id ? f.addressee_id : f.requester_id
+      ));
+    }
+  };
+
+  const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  };
+
+  const dedupeRecords = (recs: RecordWithProfile[]): RecordWithProfile[] => {
+    const result: RecordWithProfile[] = [];
+    for (const rec of recs) {
+      const isDupe = result.some(
+        (r) => r.user_id === rec.user_id &&
+          getDistance(r.latitude, r.longitude, rec.latitude, rec.longitude) < 10
+      );
+      if (!isDupe) result.push(rec);
+    }
+    return result;
   };
 
   const loadRecords = async () => {
@@ -61,7 +102,7 @@ export default function MapScreen({ onOpenDrawer }: Props) {
       .from("records")
       .select("*, profiles(*)")
       .order("recorded_at", { ascending: false });
-    if (data) setRecords(data as RecordWithProfile[]);
+    if (data) setRecords(dedupeRecords(data as RecordWithProfile[]));
     if (error) console.error("records fetch error:", error);
     setLoading(false);
   };
@@ -104,21 +145,31 @@ export default function MapScreen({ onOpenDrawer }: Props) {
           <View style={styles.currentLocationDot} />
         </Marker>
 
-        {records.map((record) => (
+        {records.filter((record) => {
+          if (filter === "me") return record.user_id === myUserId;
+          if (filter === "friends") return record.user_id !== myUserId;
+          if (filter === "close") return closeFriendIds.includes(record.user_id);
+          return true;
+        }).map((record) => (
           <Marker
             key={record.id}
             coordinate={{
               latitude: record.latitude,
               longitude: record.longitude,
             }}
-          >
-            <Text style={{ fontSize: 42 }}>💩</Text>
-            <Callout onPress={() => {
-              if (record.profiles) {
+            onPress={() => {
+              lastMarkerTap.current = Date.now();
+            }}
+            onCalloutPress={() => {
+              const elapsed = Date.now() - lastMarkerTap.current;
+              if (elapsed > 500 && record.profiles) {
                 setSelectedProfile(record.profiles);
                 setProfileModalVisible(true);
               }
-            }}>
+            }}
+          >
+            <Text style={{ fontSize: 42 }}>💩</Text>
+            <Callout tooltip={false}>
               <View style={styles.callout}>
                 <Text style={styles.calloutName}>
                   {record.profiles?.nickname || "???"}
@@ -132,7 +183,7 @@ export default function MapScreen({ onOpenDrawer }: Props) {
                 {record.comment && (
                   <Text style={styles.calloutComment}>{record.comment}</Text>
                 )}
-                <Text style={styles.calloutProfile}>プロフィールを見る</Text>
+                <Text style={styles.calloutProfile}>タップでプロフィール</Text>
               </View>
             </Callout>
           </Marker>
@@ -145,6 +196,34 @@ export default function MapScreen({ onOpenDrawer }: Props) {
         <View style={styles.hamburgerLine} />
         <View style={styles.hamburgerLine} />
       </TouchableOpacity>
+
+      {/* Filter */}
+      <View style={styles.filterBar}>
+        <TouchableOpacity
+          style={[styles.filterChip, filter === "all" ? styles.filterActive : null]}
+          onPress={() => setFilter("all")}
+        >
+          <Text style={[styles.filterText, filter === "all" ? styles.filterTextActive : null]}>全部</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filterChip, filter === "me" ? styles.filterActive : null]}
+          onPress={() => setFilter("me")}
+        >
+          <Text style={[styles.filterText, filter === "me" ? styles.filterTextActive : null]}>自分</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filterChip, filter === "friends" ? styles.filterActive : null]}
+          onPress={() => setFilter("friends")}
+        >
+          <Text style={[styles.filterText, filter === "friends" ? styles.filterTextActive : null]}>フレンド</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filterChip, filter === "close" ? styles.filterActive : null]}
+          onPress={() => setFilter("close")}
+        >
+          <Text style={[styles.filterText, filter === "close" ? styles.filterTextActive : null]}>★親しい</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Refresh */}
       <TouchableOpacity style={styles.refreshBtn} onPress={loadRecords}>
@@ -230,6 +309,27 @@ const styles = StyleSheet.create({
   calloutTime: { fontSize: 11, color: "#888", marginTop: 2 },
   calloutComment: { fontSize: 12, color: "#555", marginTop: 4 },
   calloutProfile: { fontSize: 12, color: "#4A90D9", marginTop: 6 },
+  filterBar: {
+    position: "absolute",
+    top: 110,
+    left: 16,
+    flexDirection: "row",
+    gap: 8,
+  },
+  filterChip: {
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  filterActive: {
+    backgroundColor: "rgba(74,144,217,0.3)",
+    borderColor: "#4A90D9",
+  },
+  filterText: { color: "#fff", fontSize: 12, fontWeight: "600" },
+  filterTextActive: { color: "#4A90D9" },
   refreshBtn: {
     position: "absolute",
     top: 60,
