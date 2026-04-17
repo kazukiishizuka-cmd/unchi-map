@@ -22,8 +22,24 @@ type Props = {
 
 export default function RecordDrawer({ location, profile, onClose, onComplete }: Props) {
   const [comment, setComment] = useState("");
-  const [isPublic, setIsPublic] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [address, setAddress] = useState("");
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const results = await Location.reverseGeocodeAsync({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+        if (results.length > 0) {
+          const r = results[0];
+          const parts = [r.region, r.city, r.district, r.street].filter(Boolean);
+          setAddress(parts.join(" "));
+        }
+      } catch {}
+    })();
+  }, [location]);
 
   const handleRecord = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -40,7 +56,6 @@ export default function RecordDrawer({ location, profile, onClose, onComplete }:
       latitude: location.coords.latitude,
       longitude: location.coords.longitude,
       comment: comment || null,
-      is_public: isPublic,
     });
 
     if (recordError) {
@@ -87,22 +102,13 @@ export default function RecordDrawer({ location, profile, onClose, onComplete }:
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.title}>💩 記録する</Text>
-              <TouchableOpacity
-                style={[styles.toggle, !isPublic && styles.toggleOff]}
-                onPress={() => setIsPublic(!isPublic)}
-              >
-                <Text style={styles.toggleText}>
-                  {isPublic ? "🔓 公開" : "🔒 非公開"}
-                </Text>
-              </TouchableOpacity>
             </View>
 
             {/* Location */}
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>📍 現在地</Text>
               <Text style={styles.locationText}>
-                {location.coords.latitude.toFixed(6)},{" "}
-                {location.coords.longitude.toFixed(6)}
+                {address || location.coords.latitude.toFixed(6) + ", " + location.coords.longitude.toFixed(6)}
               </Text>
             </View>
 

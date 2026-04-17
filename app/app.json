@@ -27,7 +27,11 @@
         "backgroundColor": "#0f0f1a"
       },
       "edgeToEdgeEnabled": true,
-      "permissions": ["ACCESS_FINE_LOCATION"],
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyCP2EgiDQcufe2PSvTYm_Ja7VqSuUpQUrQ"
@@ -37,9 +41,21 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "owner": "kazuki_0124",
     "plugins": [
       "expo-secure-store",
       "expo-location"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "68cc9a89-62ab-413c-aae9-21a9829b3a5f"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/68cc9a89-62ab-413c-aae9-21a9829b3a5f"
+    }
   }
 }

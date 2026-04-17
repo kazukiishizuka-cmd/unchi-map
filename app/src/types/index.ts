@@ -5,6 +5,9 @@ export type Profile = {
   pin_color: string;
   streak_count: number;
   last_record_date: string | null;
+  is_public: boolean;
+  avatar_url: string | null;
+  bio: string | null;
   created_at: string;
 };
 
@@ -14,7 +17,6 @@ export type Record = {
   latitude: number;
   longitude: number;
   comment: string | null;
-  is_public: boolean;
   recorded_at: string;
   created_at: string;
   profiles?: Profile;

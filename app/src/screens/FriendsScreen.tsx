@@ -9,6 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { supabase } from "../lib/supabase";
+import ProfileModal from "../components/ProfileModal";
 import type { Profile, Friendship } from "../types";
 
 type FriendWithProfile = {
@@ -16,12 +17,18 @@ type FriendWithProfile = {
   profile: Profile;
 };
 
-export default function FriendsScreen() {
+type Props = {
+  onBack?: () => void;
+};
+
+export default function FriendsScreen({ onBack }: Props) {
   const [friends, setFriends] = useState<FriendWithProfile[]>([]);
   const [pendingRequests, setPendingRequests] = useState<FriendWithProfile[]>([]);
   const [searchId, setSearchId] = useState("");
   const [searchResult, setSearchResult] = useState<Profile | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
 
   useEffect(() => {
     loadFriends();
@@ -121,13 +128,18 @@ export default function FriendsScreen() {
 
   return (
     <View style={styles.container}>
+      {onBack && (
+        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+          <Text style={styles.backText}>戻る</Text>
+        </TouchableOpacity>
+      )}
       <Text style={styles.title}>👥 フレンド</Text>
 
       {/* Search */}
       <View style={styles.searchBox}>
         <TextInput
           style={styles.searchInput}
-          placeholder="IDで検索（例: zuka_is）"
+          placeholder="IDで検索"
           placeholderTextColor="#555"
           value={searchId}
           onChangeText={setSearchId}
@@ -190,7 +202,10 @@ export default function FriendsScreen() {
         data={friends}
         keyExtractor={(item) => item.friendship.id}
         renderItem={({ item }) => (
-          <View style={styles.friendCard}>
+          <TouchableOpacity style={styles.friendCard} onPress={() => {
+            setSelectedProfile(item.profile);
+            setProfileModalVisible(true);
+          }}>
             <View
               style={[
                 styles.friendDot,
@@ -204,11 +219,16 @@ export default function FriendsScreen() {
             <Text style={styles.friendStreak}>
               🔥 {item.profile.streak_count}日
             </Text>
-          </View>
+          </TouchableOpacity>
         )}
         ListEmptyComponent={
           <Text style={styles.empty}>まだフレンドがいません</Text>
         }
+      />
+      <ProfileModal
+        profile={selectedProfile}
+        visible={profileModalVisible}
+        onClose={() => setProfileModalVisible(false)}
       />
     </View>
   );
@@ -216,6 +236,8 @@ export default function FriendsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0f0f1a", paddingTop: 60 },
+  backBtn: { paddingHorizontal: 20, marginBottom: 12, paddingVertical: 8 },
+  backText: { color: "#4A90D9", fontSize: 18, fontWeight: "600" },
   title: {
     color: "#fff",
     fontSize: 22,
