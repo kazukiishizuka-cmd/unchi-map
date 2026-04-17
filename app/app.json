@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "うんちマップ",
+    "slug": "unchi-map",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f0f1a"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "うんちの記録場所を取得するために位置情報を使用します"
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyCP2EgiDQcufe2PSvTYm_Ja7VqSuUpQUrQ"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0f0f1a"
+      },
+      "edgeToEdgeEnabled": true,
+      "permissions": ["ACCESS_FINE_LOCATION"],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCP2EgiDQcufe2PSvTYm_Ja7VqSuUpQUrQ"
+        }
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-location"
+    ]
+  }
+}
